@@ -1,3 +1,0 @@
-This is a test.
-To swap out hard drive as an external storage you need to use 
-^D
