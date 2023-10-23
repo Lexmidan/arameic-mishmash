@@ -41,7 +41,7 @@ def assemble(para, cache):
     x = para['x']
     dx = para['deltaX']
 
-    numberOfNode = para['numberOfNode']
+    numberOfNode = int(para['numberOfNode'])
     # Containers
     T = cache['T']; T0 = cache['T0']        #let T=T[i,j] then T0=T[i, j-1]
     F = cache['F']; Jacobian = cache['Jacobian']

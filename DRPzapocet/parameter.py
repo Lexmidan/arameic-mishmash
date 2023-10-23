@@ -37,7 +37,7 @@ def main():
     # Grid
     df.at['Time_multiplier'] = 3e-7
     df.at['length'] = init_profile['x'].iloc[-1]
-    df.at['numberOfNode'] = len(init_profile)
+    df.at['numberOfNode'] = int(len(init_profile))
     df.at['x']=init_profile['x'].values
 
     # Material
