@@ -1,0 +1,24 @@
+{VERSION 5 0 "IBM INTEL LINUX" "5.0" }
+{USTYLETAB {CSTYLE "Maple Input" -1 0 "Courier" 0 1 255 0 0 1 0 1 0 0 
+1 0 0 0 0 1 }{CSTYLE "2D Math" -1 2 "Times" 0 1 0 0 0 0 0 0 2 0 0 0 0 
+0 0 1 }{CSTYLE "2D Output" 2 20 "" 0 1 0 0 255 1 0 0 0 0 0 0 0 0 0 1 }
+{PSTYLE "Normal" -1 0 1 {CSTYLE "" -1 -1 "" 0 1 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 }0 0 0 -1 -1 -1 0 0 0 0 0 0 -1 0 }{PSTYLE "Maple Output" 0 11 1 
+{CSTYLE "" -1 -1 "" 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 }3 3 0 -1 -1 -1 0 
+0 0 0 0 0 -1 0 }}
+{SECT 0 {EXCHG {PARA 0 "> " 0 "" {MPLTEXT 1 0 18 "f := (x,y) -> a*y;" 
+}}{PARA 11 "" 1 "" {XPPMATH 20 "6#>%\"fGf*6$%\"xG%\"yG6\"6$%)operatorG
+%&arrowGF)*&%\"aG\"\"\"9%F/F)F)F)" }}}{EXCHG {PARA 0 "> " 0 "" 
+{MPLTEXT 1 0 0 "" }}}{EXCHG {PARA 0 "> " 0 "" {MPLTEXT 1 0 64 "k1 := f
+(xn,yn);\nk2 := f(xn + h/2,yn + k1*h/2);\nyn1 := yn + k2*h;" }}{PARA 
+11 "" 1 "" {XPPMATH 20 "6#>%#k1G*&%\"aG\"\"\"%#ynGF'" }}{PARA 11 "" 1 
+"" {XPPMATH 20 "6#>%#k2G*&%\"aG\"\"\",&%#ynGF'*&#F'\"\"#F'*(F&F'F)F'%
+\"hGF'F'F'F'" }}{PARA 11 "" 1 "" {XPPMATH 20 "6#>%$yn1G,&%#ynG\"\"\"*(
+%\"aGF',&F&F'*&#F'\"\"#F'*(F)F'F&F'%\"hGF'F'F'F'F/F'F'" }}}{EXCHG 
+{PARA 0 "> " 0 "" {MPLTEXT 1 0 22 "R := simplify(yn1/yn);" }}{PARA 11 
+"" 1 "" {XPPMATH 20 "6#>%\"RG,(\"\"\"F&*&%\"aGF&%\"hGF&F&*&#F&\"\"#F&*
+&)F(F,F&)F)F,F&F&F&" }}}{EXCHG {PARA 0 "> " 0 "" {MPLTEXT 1 0 19 "R :=
+ subs(a=z/h,R);" }}{PARA 11 "" 1 "" {XPPMATH 20 "6#>%\"RG,(\"\"\"F&%\"
+zGF&*&#F&\"\"#F&*$)F'F*F&F&F&" }}}{EXCHG {PARA 0 "> " 0 "" {MPLTEXT 1 
+0 0 "" }}}}{MARK "5 0 0" 0 }{VIEWOPTS 1 1 0 1 1 1803 1 1 1 1 }
+{PAGENUMBERS 0 1 2 33 1 1 }

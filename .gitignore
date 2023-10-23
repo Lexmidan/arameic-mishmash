@@ -1,6 +1,8 @@
 #ya sdelyal'
 lightning_logs/
-
+/LightningTutorials/data
+/LightningTutorials/saved_models
+/LightningTutorials/tensorboard
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
