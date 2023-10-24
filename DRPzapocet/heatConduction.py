@@ -6,9 +6,9 @@ Created on Wed Jul 31 12:15:28 2019
 """
 import numpy as np
 import pandas as pd
-
+import matplotlib.pyplot as plt
 import time
-
+from matplotlib import cm
 
 def assemble(para, cache):
     """ Assemble linear system Jacobian * dx = F
@@ -57,17 +57,14 @@ def assemble(para, cache):
         ##Lambda mean free path
     lamb = v**4/(ne*para['Gamma']*coulog)*1/np.sqrt(Z+1)
     gradT=np.gradient(T,x)
-    ##Knudsen number accordint (5)
+
+    ##Knudsen number according to (5)
     Kn = -lamb*gradT/T
     kappa = para['conductivity']*1.31e10/coulog*para['tau']**(cache['beta']-5/2)
     cache['kappa_LOCAL'] = para['conductivity']*1.31e10/coulog*para['tau']
-    kQSH = 6.1e+02
-    #Kn= np.sqrt(T*Kb/para['m_e'])**4/(ne*(4 * const.pi * df['q_e']**4/df['m_e']**2)*(23-np.log(np.sqrt(ne)*Z/T**1.5)))*1/np.sqrt(Z+1)*gradT/T
-
-
     alphas = para['alphas']
     betas = para['betas']
-    heatflux = -(kQSH/Z)*((Z+0.24)/(Z+4.2))*T**2.5*gradT
+    heatflux = -(para['SpitzerHarmCOND']/Z)*((Z+0.24)/(Z+4.2))*T**2.5*gradT
 
 
 
@@ -142,11 +139,12 @@ def initialize(para):
     Zbar_init=para['InitZbarProfile']
     ne_init=para['InitneProfile']
     Kn_init=para['InitKnProfile']
+    heatflux_init= para['InitHeatflux']
     T = T_init 
     T0 = T_init
     alpha_init = para['alphas']
     beta_init = para['betas']
-    heatflux_init= para['heatflux']
+    
 
 
     #Define empty matrices that will contain time evolution of the profiles
@@ -157,7 +155,6 @@ def initialize(para):
     Zbar_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     Kn_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     ne_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
-
     F = np.zeros((numberOfNode, 1))
     Jacobian = np.zeros((numberOfNode, numberOfNode))
 
@@ -247,7 +244,7 @@ def newtonIteration(para, cache):
     """ Newton's Iteration for Equation System
     
     Process:
-        1. Get max iteratino, convergence limit
+        1. Get max iteration, convergence limit
         2. Call assemble function to get Jacobian and F(RHS)
         3. Solve for dT, update solution
         4. Evaluate F, get value of 2-norm
@@ -288,7 +285,7 @@ def newtonIteration(para, cache):
 
     elif para['Break_condition']=='lower_bound':
         n=0
-        while True:
+        while np.abs(energy_init-energy)/energy_init >= convergence:
             cache = assemble(para, cache)
             F = cache['F']
             norm = np.linalg.norm(F)
@@ -296,9 +293,6 @@ def newtonIteration(para, cache):
             if n==0: slump, energy_init = np.copy(norm), np.copy(energy)
             cache = solveLinearSystem(para, cache)
             n+=1
-
-            if np.abs(energy_init-energy)/energy_init < convergence:
-                break
     else: 
         print('Wrong break condition')
         quit()
@@ -368,7 +362,6 @@ def fixedValue(value, U2):
     return Ug
 
 
-#TEST GIT EXTS WI
 def fixedGradient(q, kappa, dx, U1, alphas, betas):
     """  Neumann boundary condition
     
@@ -413,3 +406,33 @@ def secondOrder(U, Ug1, Ug2, alphas, betas, kappa):
                     -.5*(alphas[i+1]*kappa[i+1]*U[i+1]**betas[i+1] + alphas[i]*kappa[i]*U[i]**betas[i])*(U[i+1] - U[i])
 
     return d2U
+
+#visualisation
+def evolutionField(results, name):
+    """ Generate 3D temperature fields
+    
+    For better understanding of the results
+    
+    Inputs:
+        1. parameter, a pandas series
+        2. results, a numpy array
+    """
+    
+    X = results.index
+    Y = results.columns*1e9
+    X, Y = np.meshgrid(X, Y)
+    
+    fig = plt.figure(figsize=(12,8))
+    ax = fig.add_subplot(projection='3d')
+    ax.set_xlabel(r'$x$ [cm]', fontsize=16,labelpad=15)
+    ax.set_ylabel(r'$t$ [ns]', fontsize=16,labelpad=15)
+    ax.set_zlabel(name, fontsize=16,labelpad=15)
+
+
+    ax.grid(visible=None, which='minor', axis='both')
+    Z = results.T.values
+    ax.plot_surface(X, Y, Z, 
+                    cmap=cm.seismic,
+                    linewidth=0, 
+                    antialiased=True)
+    plt.show()
