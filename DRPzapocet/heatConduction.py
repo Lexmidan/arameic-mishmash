@@ -62,8 +62,6 @@ def assemble(para, cache):
     Kn = -lamb*gradT/T
     kappa = para['conductivity']*1.31e10/coulog*para['tau']**(cache['beta']-5/2)
     cache['kappa_LOCAL'] = para['conductivity']*1.31e10/coulog*para['tau']
-    alphas = para['alphas']
-    betas = para['betas']
     heatflux = -(para['SpitzerHarmCOND']/Z)*((Z+0.24)/(Z+4.2))*T**2.5*gradT
 
 
@@ -116,7 +114,7 @@ def assemble(para, cache):
 
     # Store in cache
     cache['F'] = F; cache['Jacobian'] = Jacobian
-    cache['alpha'], cache['beta'], cache['kappa'], cache['Kn'], cache['heatflux'] = alphas, betas, kappa, Kn, heatflux
+    cache['kappa'], cache['Kn'], cache['heatflux'] = kappa, Kn, heatflux
     cache['coulog'] = coulog
     return cache
 
@@ -149,8 +147,6 @@ def initialize(para):
 
     #Define empty matrices that will contain time evolution of the profiles
     TProfile = np.zeros((numberOfNode, numOfTimeStep + 1))
-    alpha_prof= np.zeros((numberOfNode, numOfTimeStep + 1))
-    beta_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     heatflux_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     Zbar_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     Kn_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
@@ -160,8 +156,6 @@ def initialize(para):
 
     #Filling first column with initial values of the quantities
     TProfile[:,0] = T.reshape(1,-1)
-    alpha_prof[:,0] = alpha_init.reshape(1,-1)
-    beta_prof[:,0] = beta_init.reshape(1,-1)
     heatflux_prof[:,0] = heatflux_init.reshape(1,-1)
     Kn_prof[:,0] = Kn_init.reshape(1,-1)
     ne_prof[:,0] = ne_init.reshape(1,-1)
@@ -169,15 +163,14 @@ def initialize(para):
 
     times=np.array([0])
 
-    coulog_init=23-np.log(np.sqrt(ne_init)*Zbar_init/T_init**1.5)
+    coulog_init = 23-np.log(np.sqrt(ne_init)*Zbar_init/T_init**1.5)
 
-    dt=Exception("dt wasn't calculated")
-    kappa=Exception("kappa wasn't calculated")
+    dt = Exception("dt wasn't calculated")
+    kappa = Exception("kappa wasn't calculated")
     cache = {'T':T,'T0':T0,'TProfile':TProfile, 'alpha':alpha_init, 'beta':beta_init, 'heatflux':heatflux_init,
              'F':F,'Jacobian':Jacobian, 'time':0, 'times':times, 'dt':dt, 'kappa': kappa, 'Zbar':Zbar_init, 
              'ne':ne_init,'Kn':Kn_init, 'Kn_prof':Kn_prof,'ne_prof':ne_prof,'Zbar_prof':Zbar_prof,
-             'Log':pd.DataFrame(),
-             'alpha_prof':alpha_prof, 'beta_prof':beta_prof, 'heatflux_prof':heatflux_prof, 'coulog':coulog_init}
+             'Log':pd.DataFrame(),'heatflux_prof':heatflux_prof, 'coulog':coulog_init}
     return cache
 
 
@@ -212,9 +205,7 @@ def storeUpdateResult(cache):
     """
     
     timeStep = cache['ts']
-    TProfile = cache['TProfile']
-    alpha_prof = cache['alpha_prof']     #all profiles of params
-    beta_prof = cache['beta_prof']   
+    TProfile = cache['TProfile'] 
     heatflux_prof = cache['heatflux_prof']    
     Zbar_prof = cache['Zbar_prof']   
     Kn_prof = cache['Kn_prof']   
@@ -231,8 +222,6 @@ def storeUpdateResult(cache):
     cache['T0'] = T.copy()
 
     TProfile[:,timeStep] = T.reshape(1,-1)
-    alpha_prof[:,timeStep] = alpha.reshape(1,-1)
-    beta_prof[:,timeStep] = beta.reshape(1,-1)
     heatflux_prof[:,timeStep] = heatflux.reshape(1,-1)
     Zbar_prof[:,timeStep] = Zbar.reshape(1,-1)
     Kn_prof[:,timeStep] = Kn.reshape(1,-1)
@@ -339,12 +328,10 @@ def solve(para, FluxLimiter=None):
         cache = newtonIteration(para, cache)
         cache = storeUpdateResult(cache)
     TProfile = pd.DataFrame(cache['TProfile'], columns=cache['times'],index=para['x'])
-    alpha_prof = pd.DataFrame(cache['alpha_prof'], columns=cache['times'],index=para['x'])
-    betas_prof = pd.DataFrame(cache['beta_prof'], columns=cache['times'],index=para['x'])
     heatflux_prof = cache['heatflux_prof']
     runtime = time.time() - start
     print('[Cost] CPU time spent','%.3f'%runtime,'s')
-    return TProfile, cache, alpha_prof, betas_prof, heatflux_prof
+    return TProfile, cache, heatflux_prof
 
 
 "Boundary condition"
