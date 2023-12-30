@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 import lmfit
 from inspect import signature
 from matplotlib.ticker import AutoMinorLocator
-path='C:/Users/aleks/Projects/arameic-mishmash/VKT/olej_rot/'
+path='C:/Users/aleks/Projects/arameic-mishmash/VKT/ROV/'
 
 natek=pd.read_csv(f'{path}vlivnatek.csv', header=None, delimiter=';', decimal=',')
 odtek=pd.read_csv(f'{path}odtek.csv', header=None, delimiter=';', decimal=',')

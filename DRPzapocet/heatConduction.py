@@ -35,8 +35,6 @@ def assemble(para, cache):
     typeXL = para['x=L type']
     valueXL = para['x=L value']
     ne = cache['ne']
-    Z = cache['Zbar']
-    Kn = cache['Kn']
     Kb = para['boltzman']
     x = para['x']
     dx = para['deltaX']
@@ -49,22 +47,9 @@ def assemble(para, cache):
 
 
     alphas, betas, heatflux = cache['alpha'], cache['beta'], cache['heatflux']
-        ##Coulomb logarithm 
-    coulog = 23-np.log(np.sqrt(ne)*Z/T**1.5) #np.ones(len(para['x'])) #23-np.log(np.sqrt(ne)*Z/T**1.5)
-    
-        ##Thermal velocity (profile)
-    v=np.sqrt(T*Kb/para['m_e'])
-        ##Lambda mean free path
-    lamb = v**4/(ne*para['Gamma']*coulog)*1/np.sqrt(Z+1)
-    gradT=np.gradient(T,x)
+    gradT = np.gradient(T,x)
 
-    ##Knudsen number according to (5)
-    Kn = -lamb*gradT/T
-    kappa = para['conductivity']*1.31e10/coulog*para['tau']**(cache['beta']-5/2)
-    cache['kappa_LOCAL'] = para['conductivity']*1.31e10/coulog*para['tau']
-    heatflux = -(para['SpitzerHarmCOND']/Z)*((Z+0.24)/(Z+4.2))*T**2.5*gradT
-
-
+    heatflux = -alphas*T**2.5*gradT
 
 
     '''    
@@ -76,46 +61,46 @@ def assemble(para, cache):
         # BC node at x=0
         if i == 0:
             if typeX0 == 'heatFlux':
-                Ug1 = fixedGradient(valueX0, kappa[i], dx, T[0], alphas[i], betas[i]) #boundary values
-                Jacobian[0][1] = (1/dx**2)*(alphas[i+1]*kappa[i+1]*betas[i+1]*T[i+1]**(betas[i+1]-1)*T[i]\
-                                           -(betas[i+1]+1)*alphas[i+1]*kappa[i+1]*T[i+1]**betas[i+1] - alphas[i]*kappa[i]*T[i]**betas[i])
+                Ug1 = fixedGradient(valueX0, dx, T[0], alphas[i], betas[i]) #boundary values
+                Jacobian[0][1] = (1/dx**2)*(alphas[i+1]*betas[i+1]*T[i+1]**(betas[i+1]-1)*T[i]\
+                                           -(betas[i+1]+1)*alphas[i+1]*T[i+1]**betas[i+1] - alphas[i]*T[i]**betas[i])
             elif typeX0 == 'fixedTemperature':
                 Ug1 = fixedValue(valueX0, T[1])
                 Jacobian[0][1] = 0
-            Jacobian[i][i] = (3/2*ne[i]*Kb)/dt + (1/dx**2)*.5*(alphas[i+1]*kappa[i+1]*T[i+1]**betas[i+1] + alphas[i]*kappa[i]*Ug1**betas[i]\
-                            +2*(betas[i]+1)*alphas[i]*kappa[i]*T[i]**betas[i] - (betas[i]*alphas[i]*kappa[i]*T[i]**(betas[i]-1))*(Ug1+T[i+1]))
+            Jacobian[i][i] = (3/2*ne[i]*Kb)/dt + (1/dx**2)*.5*(alphas[i+1]*T[i+1]**betas[i+1] + alphas[i]*Ug1**betas[i]\
+                            +2*(betas[i]+1)*alphas[i]*T[i]**betas[i] - (betas[i]*alphas[i]*T[i]**(betas[i]-1))*(Ug1+T[i+1]))
         # BC node at x=L
         elif i == numberOfNode-1:
             if typeXL == 'heatFlux':
-                Ug2 = fixedGradient(valueXL, kappa[i], dx, T[-1], alphas[i], betas[i])  #boundary values
-                Jacobian[-1][-2] = (1/dx**2)*(betas[i-1]*kappa[i-1]*alphas[i-1]*T[i-1]**(betas[i-1]-1)*T[i]\
-                                           -(betas[i-1]+1)*alphas[i-1]*kappa[i-1]*T[i-1]**betas[i-1] - alphas[i]*kappa[i]*T[i]**betas[i])
+                Ug2 = fixedGradient(valueXL, dx, T[-1], alphas[i], betas[i])  #boundary values
+                Jacobian[-1][-2] = (1/dx**2)*(betas[i-1]*alphas[i-1]*T[i-1]**(betas[i-1]-1)*T[i]\
+                                           -(betas[i-1]+1)*alphas[i-1]*T[i-1]**betas[i-1] - alphas[i]*T[i]**betas[i])
             elif typeXL == 'fixedTemperature':
                 Ug2 = fixedValue(valueXL, T[-2])
                 Jacobian[-1][-2] = 0
-            Jacobian[i][i] = (3/2*ne[i]*Kb)/dt + (1/dx**2)*.5*(alphas[i]*kappa[i]*Ug2**betas[i] + alphas[i-1]*kappa[i-1]*T[i-1]**betas[i-1]\
-                            +2*(betas[i]+1)*alphas[i]*kappa[i]*T[i]**betas[i] - (betas[i]*alphas[i]*kappa[i]*T[i]**(betas[i]-1))*(T[i-1]+Ug2))  
+            Jacobian[i][i] = (3/2*ne[i]*Kb)/dt + (1/dx**2)*.5*(alphas[i]*Ug2**betas[i] + alphas[i-1]*T[i-1]**betas[i-1]\
+                            +2*(betas[i]+1)*alphas[i]*T[i]**betas[i] - (betas[i]*alphas[i]*T[i]**(betas[i]-1))*(T[i-1]+Ug2))  
         # Interior nodes
 
         else:   #!!! \alpha_{i+1/2} := alpha[i]
-            Jacobian[i][i+1] = (1/dx**2)*.5*(alphas[i+1]*kappa[i+1]*betas[i+1]*T[i+1]**(betas[i+1]-1)*T[i]\
-                                           -(betas[i+1]+1)*alphas[i+1]*kappa[i+1]*T[i+1]**betas[i+1] - alphas[i]*kappa[i]*T[i]**betas[i])
+            Jacobian[i][i+1] = (1/dx**2)*.5*(alphas[i+1]*betas[i+1]*T[i+1]**(betas[i+1]-1)*T[i]\
+                                           -(betas[i+1]+1)*alphas[i+1]*T[i+1]**betas[i+1] - alphas[i]*T[i]**betas[i])
             
-            Jacobian[i][i-1] = (1/dx**2)*.5*(betas[i-1]*kappa[i-1]*alphas[i-1]*T[i-1]**(betas[i-1]-1)*T[i]\
-                                           -(betas[i-1]+1)*alphas[i-1]*kappa[i-1]*T[i-1]**betas[i-1] - alphas[i]*kappa[i]*T[i]**betas[i])
+            Jacobian[i][i-1] = (1/dx**2)*.5*(betas[i-1]*alphas[i-1]*T[i-1]**(betas[i-1]-1)*T[i]\
+                                           -(betas[i-1]+1)*alphas[i-1]*T[i-1]**betas[i-1] - alphas[i]*T[i]**betas[i])
             
-            Jacobian[i][i] = (3/2*ne[i]*Kb)/dt + (1/dx**2)*.5*(alphas[i+1]*kappa[i+1]*T[i+1]**betas[i+1] + alphas[i-1]*kappa[i-1]*T[i-1]**betas[i-1]\
-                            +2*(betas[i]+1)*alphas[i]*kappa[i]*T[i]**betas[i] - (betas[i]*alphas[i]*kappa[i]*T[i]**(betas[i]-1))*(T[i-1]+T[i+1]))
+            Jacobian[i][i] = (3/2*ne[i]*Kb)/dt + (1/dx**2)*.5*(alphas[i+1]*T[i+1]**betas[i+1] + alphas[i-1]*T[i-1]**betas[i-1]\
+                            +2*(betas[i]+1)*alphas[i]*T[i]**betas[i] - (betas[i]*alphas[i]*T[i]**(betas[i]-1))*(T[i-1]+T[i+1]))
 
 
     # Calculate F (right hand side vector)
-    d2T = secondOrder(T, Ug1, Ug2, alphas, betas,kappa)
+    d2T = secondOrder(T, Ug1, Ug2, alphas, betas)
     F = (3/2*ne)*(T - T0)*Kb/dt + d2T/dx**2 # Vectorization   dT/dt - a d2T/dx2=F/dt
 
     # Store in cache
-    cache['F'] = F; cache['Jacobian'] = Jacobian
-    cache['kappa'], cache['Kn'], cache['heatflux'] = kappa, Kn, heatflux
-    cache['coulog'] = coulog
+    cache['F'] = F
+    cache['Jacobian'] = Jacobian
+    cache['heatflux'] =  heatflux
     return cache
 
 
@@ -134,10 +119,8 @@ def initialize(para):
     numberOfNode = int(para['numberOfNode'])
     numOfTimeStep = para['numberOfTimeStep']
     T_init = para['InitTeProfile']
-    Zbar_init=para['InitZbarProfile']
-    ne_init=para['InitneProfile']
-    Kn_init=para['InitKnProfile']
-    heatflux_init= para['InitHeatflux']
+    ne_init = para['InitneProfile']
+    heatflux_init = para['InitHeatflux']
     T = T_init 
     T0 = T_init
     alpha_init = para['alphas']
@@ -148,29 +131,23 @@ def initialize(para):
     #Define empty matrices that will contain time evolution of the profiles
     TProfile = np.zeros((numberOfNode, numOfTimeStep + 1))
     heatflux_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
-    Zbar_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
-    Kn_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     ne_prof = np.zeros((numberOfNode, numOfTimeStep + 1))
     F = np.zeros((numberOfNode, 1))
     Jacobian = np.zeros((numberOfNode, numberOfNode))
 
     #Filling first column with initial values of the quantities
     TProfile[:,0] = T.reshape(1,-1)
-    heatflux_prof[:,0] = heatflux_init.reshape(1,-1)
-    Kn_prof[:,0] = Kn_init.reshape(1,-1)
     ne_prof[:,0] = ne_init.reshape(1,-1)
-    Zbar_prof[:,0] = Zbar_init.reshape(1,-1)
+    heatflux_prof[:,0] = heatflux_init.reshape(1,-1)
 
-    times=np.array([0])
+    times = np.array([0])
 
-    coulog_init = 23-np.log(np.sqrt(ne_init)*Zbar_init/T_init**1.5)
 
     dt = Exception("dt wasn't calculated")
     kappa = Exception("kappa wasn't calculated")
-    cache = {'T':T,'T0':T0,'TProfile':TProfile, 'alpha':alpha_init, 'beta':beta_init, 'heatflux':heatflux_init,
-             'F':F,'Jacobian':Jacobian, 'time':0, 'times':times, 'dt':dt, 'kappa': kappa, 'Zbar':Zbar_init, 
-             'ne':ne_init,'Kn':Kn_init, 'Kn_prof':Kn_prof,'ne_prof':ne_prof,'Zbar_prof':Zbar_prof,
-             'Log':pd.DataFrame(),'heatflux_prof':heatflux_prof, 'coulog':coulog_init}
+    cache = {'T': T, 'T0': T0, 'TProfile': TProfile, 'alpha': alpha_init, 'beta': beta_init, 'heatflux': heatflux_init,
+             'F': F, 'Jacobian': Jacobian, 'time': 0, 'times': times, 'dt': dt, 'kappa': kappa, 'ne_prof':ne_prof, 
+             'ne': ne_init, 'Log': pd.DataFrame(), 'heatflux_prof': heatflux_prof}
     return cache
 
 
@@ -191,8 +168,8 @@ def solveLinearSystem(para, cache):
     B = cache['F']
     dT = np.linalg.solve(A, B)
     T = cache['T']
-    T = T-dT * relax       #T(j+1)=T(j)+JI``(F)
-    T[np.where(T<=0)]=10
+    T = T - dT * relax       #T(j+1)=T(j)+JI``(F)
+    T[np.where(T<=0)] = 10
     cache['T'] = T
     cache['dT'] = dT
     return cache
@@ -207,24 +184,15 @@ def storeUpdateResult(cache):
     timeStep = cache['ts']
     TProfile = cache['TProfile'] 
     heatflux_prof = cache['heatflux_prof']    
-    Zbar_prof = cache['Zbar_prof']   
-    Kn_prof = cache['Kn_prof']   
     ne_prof = cache['ne_prof']
 
-
-    alpha = cache['alpha']      #current profile
-    beta = cache['beta']
     heatflux = cache['heatflux']
-    Zbar = cache['Zbar']
-    Kn = cache['Kn']
     ne = cache['ne']
     T = cache['T']
     cache['T0'] = T.copy()
 
     TProfile[:,timeStep] = T.reshape(1,-1)
     heatflux_prof[:,timeStep] = heatflux.reshape(1,-1)
-    Zbar_prof[:,timeStep] = Zbar.reshape(1,-1)
-    Kn_prof[:,timeStep] = Kn.reshape(1,-1)
     ne_prof[:,timeStep] = ne.reshape(1,-1)
 
     return cache
@@ -245,23 +213,19 @@ def newtonIteration(para, cache):
     maxIteration = para['maxIteration']
     convergence = para['convergence']
 
-    T = cache['T'];     #let T=T[i,j] then T0=T[i, j-1] 
-    #cache['dt'] = para['Time_multiplier']*np.min(3/2*para['InitneProfile']*para['boltzman']*para['deltaX']**2/((para['conductivity']*1.31e10/cache['coulog']*para['tau']**(cache['beta']-5/2))*cache['alpha']*T**2.5))
+    T = cache['T']     
     cache['dt'] = para['dt']
-    cache['time']+=cache['dt']
+    cache['time'] += cache['dt']
     cache['times'] = np.append(cache['times'],cache['time'])
     log = cache['Log']
     ts = cache['ts']
-
-
-
 
     if para['Break_condition']=='max_iter':
         for n in range(maxIteration):
             cache = assemble(para, cache)
             F = cache['F']
             norm = np.linalg.norm(F)
-            energy=np.mean(1.5*para['boltzman']*cache['T']*cache['ne'])
+            energy = np.mean(1.5*para['boltzman']*cache['T']*cache['ne'])
             
             if n==0: slump, energy_init = np.copy(norm), np.copy(energy)
             #if norm/np.linalg.norm(cache['T']) < convergence:
@@ -278,10 +242,10 @@ def newtonIteration(para, cache):
             cache = assemble(para, cache)
             F = cache['F']
             norm = np.linalg.norm(F)
-            energy=np.mean(1.5*para['boltzman']*cache['T']*cache['ne'])
+            energy = np.mean(1.5*para['boltzman']*cache['T']*cache['ne'])
             if n==0: slump, energy_init = np.copy(norm), np.copy(energy)
             cache = solveLinearSystem(para, cache)
-            n+=1
+            n += 1
     else: 
         print('Wrong break condition')
         quit()
@@ -302,7 +266,7 @@ def newtonIteration(para, cache):
     return cache
 
 
-def solve(para, FluxLimiter=None):
+def solve(para):
     """ Main function to solve heat conduction
     
     Input: a Pandas series containing all parameters
@@ -314,20 +278,19 @@ def solve(para, FluxLimiter=None):
            step
         4. Update T, save result to T profile
     
-    Return: temperature profile as final result
+    Return: temperature profile as final result, cache, and heatflux profile
     """
     
-    print(" Heat Conduction Solver")
+    print("Heat Conduction Solver")
     start = time.time()
     cache = initialize(para)
-    cache['FluxLimiter']=FluxLimiter
     numOfTimeStep = para['numberOfTimeStep']
     print(' [Step] [Time] [Iter] [Residue] [Newton outcome] [Max beta] [Max alpha] [Minimal T] [Maximal T] [meanEnergy]')
     for timeStep in range(1, numOfTimeStep+1):
         cache['ts'] = timeStep
         cache = newtonIteration(para, cache)
         cache = storeUpdateResult(cache)
-    TProfile = pd.DataFrame(cache['TProfile'], columns=cache['times'],index=para['x'])
+    TProfile = pd.DataFrame(cache['TProfile'], columns=cache['times'], index=para['x'])
     heatflux_prof = cache['heatflux_prof']
     runtime = time.time() - start
     print('[Cost] CPU time spent','%.3f'%runtime,'s')
@@ -349,7 +312,7 @@ def fixedValue(value, U2):
     return Ug
 
 
-def fixedGradient(q, kappa, dx, U1, alphas, betas):
+def fixedGradient(q, dx, U1, alphas, betas):
     """  Neumann boundary condition
     
     Assume that the resulted gradient at BC is fixed.
@@ -358,12 +321,12 @@ def fixedGradient(q, kappa, dx, U1, alphas, betas):
     Return: float
     """
     #(U1-Ug)/dx*kappa=q
-    Ug =  q *(betas+1)/(kappa*alphas) * 2 * dx  + U1
+    Ug =  q *(betas+1)/(alphas) * 2 * dx  + U1
     return Ug
 
 
 
-def secondOrder(U, Ug1, Ug2, alphas, betas, kappa):
+def secondOrder(U, Ug1, Ug2, alphas, betas):
     """ Calculate second order derivative
     
     Centered differencing approximation.
@@ -383,14 +346,14 @@ def secondOrder(U, Ug1, Ug2, alphas, betas, kappa):
 
     for i in range(0, U.size):
         if i==0:
-            d2U[i] = .5*(alphas[i]*kappa[i]*Ug1**betas[i] + alphas[i]*kappa[i]*U[i]**betas[i])*(U[i] - Ug1)\
-                    -.5*(alphas[i+1]*kappa[i+1]*U[i+1]**betas[i+1] + alphas[i]*kappa[i]*U[i]**betas[i])*(U[i+1] - U[i])
+            d2U[i] = .5*(alphas[i]*Ug1**betas[i] + alphas[i]*U[i]**betas[i])*(U[i] - Ug1)\
+                    -.5*(alphas[i+1]*U[i+1]**betas[i+1] + alphas[i]*U[i]**betas[i])*(U[i+1] - U[i])
         elif i==(U.size - 1):
-            d2U[i] = .5*(alphas[i-1]*kappa[i-1]*U[i-1]**betas[i-1] + alphas[i]*kappa[i]*U[i]**betas[i])*(U[i] - U[i-1])\
-                    -.5*(alphas[i]*kappa[i]*Ug2**betas[i] + alphas[i]*kappa[i]*U[i]**betas[i])*(Ug2 - U[i])
+            d2U[i] = .5*(alphas[i-1]*U[i-1]**betas[i-1] + alphas[i]*U[i]**betas[i])*(U[i] - U[i-1])\
+                    -.5*(alphas[i]*Ug2**betas[i] + alphas[i]*U[i]**betas[i])*(Ug2 - U[i])
         else:
-            d2U[i] = .5*(alphas[i-1]*kappa[i-1]*U[i-1]**betas[i-1] + alphas[i]*kappa[i]*U[i]**betas[i])*(U[i] - U[i-1])\
-                    -.5*(alphas[i+1]*kappa[i+1]*U[i+1]**betas[i+1] + alphas[i]*kappa[i]*U[i]**betas[i])*(U[i+1] - U[i])
+            d2U[i] = .5*(alphas[i-1]*U[i-1]**betas[i-1] + alphas[i]*U[i]**betas[i])*(U[i] - U[i-1])\
+                    -.5*(alphas[i+1]*U[i+1]**betas[i+1] + alphas[i]*U[i]**betas[i])*(U[i+1] - U[i])
 
     return d2U
 
