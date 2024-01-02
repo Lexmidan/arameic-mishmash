@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jul 31 12:15:28 2019
+Created on Wed Jul 31 12:15:28 2022
 
 @author: ?
 """
@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 from matplotlib import cm
+import parameter as param
 
 def assemble(para, cache):
     """ Assemble linear system Jacobian * dx = F
@@ -169,7 +170,7 @@ def solveLinearSystem(para, cache):
     dT = np.linalg.solve(A, B)
     T = cache['T']
     T = T - dT * relax       #T(j+1)=T(j)+JI``(F)
-    T[np.where(T<=0)] = 10
+    T[np.where(T<=0)] = 1e-2
     cache['T'] = T
     cache['dT'] = dT
     return cache
@@ -210,8 +211,6 @@ def newtonIteration(para, cache):
     
     """
     
-    maxIteration = para['maxIteration']
-    convergence = para['convergence']
 
     T = cache['T']     
     cache['dt'] = para['dt']
@@ -221,7 +220,7 @@ def newtonIteration(para, cache):
     ts = cache['ts']
 
     if para['Break_condition']=='max_iter':
-        for n in range(maxIteration):
+        for n in range(para['maxIteration']):
             cache = assemble(para, cache)
             F = cache['F']
             norm = np.linalg.norm(F)
@@ -229,7 +228,7 @@ def newtonIteration(para, cache):
             
             if n==0: slump, energy_init = np.copy(norm), np.copy(energy)
             #if norm/np.linalg.norm(cache['T']) < convergence:
-            elif np.abs(energy_init-energy)/energy_init < convergence and n!=0:
+            elif np.abs(energy_init-energy)/energy_init < para['convergence'] and n!=0:
                 log.loc[ts,'PhysicalTime'] = cache['time']
                 log.loc[ts,'Iteration'] = n+1
                 log.loc[ts,'Residual'] = np.abs(energy_init-energy)/energy_init
@@ -238,7 +237,7 @@ def newtonIteration(para, cache):
 
     elif para['Break_condition']=='lower_bound':
         n=0
-        while np.abs(energy_init-energy)/energy_init >= convergence:
+        while np.abs(energy_init-energy)/energy_init >= para['convergence']:
             cache = assemble(para, cache)
             F = cache['F']
             norm = np.linalg.norm(F)
@@ -256,8 +255,6 @@ def newtonIteration(para, cache):
           #'[{:8.2E}'.format(norm/energy),']',
           '[{:8.2E}'.format(np.abs(energy_init-energy)/energy_init),']', #shows what portion of energy was lost in one time step
           '[{:8.2E}'.format(norm/slump),']',
-          '[{:8.2E}'.format(np.max(cache['beta'])),']',
-          '[{:8.2E}'.format(np.max(cache['alpha'])),']',
           '[{:8.2E}'.format(np.min(T)),']',
           '[{:8.2E}'.format(np.max(T)),']',
           #' [','{:8.2E}'.format(np.mean(cache['T'])),']')
@@ -285,16 +282,15 @@ def solve(para):
     start = time.time()
     cache = initialize(para)
     numOfTimeStep = para['numberOfTimeStep']
-    print(' [Step] [Time] [Iter] [Residue] [Newton outcome] [Max beta] [Max alpha] [Minimal T] [Maximal T] [meanEnergy]')
+    print(' [Step] [Time] [Iter] [Residue] [Newton outcome] [Minimal T] [Maximal T] [meanEnergy]')
     for timeStep in range(1, numOfTimeStep+1):
         cache['ts'] = timeStep
         cache = newtonIteration(para, cache)
         cache = storeUpdateResult(cache)
     TProfile = pd.DataFrame(cache['TProfile'], columns=cache['times'], index=para['x'])
-    heatflux_prof = cache['heatflux_prof']
     runtime = time.time() - start
     print('[Cost] CPU time spent','%.3f'%runtime,'s')
-    return TProfile, cache, heatflux_prof
+    return TProfile, cache
 
 
 "Boundary condition"
@@ -374,8 +370,8 @@ def evolutionField(results, name):
     
     fig = plt.figure(figsize=(12,8))
     ax = fig.add_subplot(projection='3d')
-    ax.set_xlabel(r'$x$ [cm]', fontsize=16,labelpad=15)
-    ax.set_ylabel(r'$t$ [ns]', fontsize=16,labelpad=15)
+    ax.set_xlabel(r'$x$', fontsize=16,labelpad=15)
+    ax.set_ylabel(r'$t$', fontsize=16,labelpad=15)
     ax.set_zlabel(name, fontsize=16,labelpad=15)
 
 
@@ -386,3 +382,12 @@ def evolutionField(results, name):
                     linewidth=0, 
                     antialiased=True)
     plt.show()
+
+
+if __name__ == "__main__":
+    parameter = param.main()
+    results, cache = solve(parameter)
+    T = pd.DataFrame(results)
+
+    evolutionField(T[T.columns[:]], r'$T$')
+    

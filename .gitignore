@@ -1,4 +1,5 @@
 #ya sdelyal'
+*.png
 lightning_logs/
 /LightningTutorials/data
 /LightningTutorials/saved_models
